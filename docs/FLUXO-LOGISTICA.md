@@ -88,9 +88,13 @@ reclama.
 
 ## 6. Linha do tempo de notificações
 
+Hoje esses avisos chegam na aba **Avisos** do sistema. A infraestrutura de e-mail
+está pronta e desligada (`config_sistema.email_ativo`); ligá-la faz os mesmos
+avisos saírem também por e-mail, com convite `.ics` para o calendário.
+
 | Quando | Para quem | O quê |
 |---|---|---|
-| No agendamento | Professor | Confirmação + regra de retirada + evento no Outlook |
+| No agendamento | Professor | Confirmação + regra de retirada |
 | No agendamento | Coordenação | "Novo agendamento" (resolve o *"os professores agendam e não sou notificado"*) |
 | Véspera, 17h | Professor | "Amanhã você tem 20 iPads às 8h" |
 | Dia, 06h30 | Estagiário + Coordenação | Fila do dia completa (entregas, coletas, transferências) |

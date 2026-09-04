@@ -290,6 +290,24 @@ begin
                where chave like 'fila_do_dia:' || v_mta || '%') like '%COLETA%',
              'o resumo lista o que ainda falta fazer');
 
+  -- ===========================================================
+  raise notice '--- canal dos avisos (sem e-mail configurado) ---';
+  perform ok((select canal from notificacao where chave='confirmacao:'||v_r1) = 'APP',
+             'com email_ativo=false o aviso nasce no canal APP');
+
+  perform ok(not exists (select 1 from notificacao_pendente),
+             'worker de e-mail não vê avisos do canal APP');
+
+  update config_sistema set email_ativo = true;
+  insert into reserva (pool_id, horario_id, data, professor_id, turma_texto, quantidade)
+  values (v_pool_pio, v_h2, v_data, v_prof2, '5ºA', 5);
+  perform ok((select canal from notificacao
+               where assunto like '%5ºA%' limit 1) = 'EMAIL',
+             'ligar email_ativo passa os novos avisos para o canal EMAIL');
+  perform ok(exists (select 1 from notificacao_pendente),
+             'worker de e-mail passa a enxergar a fila');
+  update config_sistema set email_ativo = false;
+
   raise notice '';
   raise notice '=== TODOS OS TESTES PASSARAM ===';
 end $$;

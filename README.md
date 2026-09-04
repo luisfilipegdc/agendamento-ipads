@@ -8,8 +8,8 @@ onde o calendário é gerado, o saldo é calculado e os avisos saem sozinhos.
 | Antes | Agora |
 |---|---|
 | Criar uma aba nova a cada mês, em 5 planilhas | A grade horária é cadastrada uma vez; qualquer data é gerada a partir dela |
-| Professores agendam e a coordenação não fica sabendo | E-mail para a coordenação a cada novo agendamento |
-| Ninguém lembra de levar/buscar os iPads | Convite `.ics` no calendário do professor + lembrete na véspera + fila do dia para o estagiário |
+| Professores agendam e a coordenação não fica sabendo | Aviso para a coordenação a cada novo agendamento |
+| Ninguém lembra de levar/buscar os iPads | Lembrete de véspera, fila do dia para o estagiário e cobrança automática de devolução em atraso |
 | Ir até o professor levar e depois buscar | Fila com check-in/check-out e **transferência direta** entre salas em horários consecutivos |
 
 O fluxo completo está em [`docs/FLUXO-LOGISTICA.md`](docs/FLUXO-LOGISTICA.md).
@@ -38,17 +38,32 @@ a expectativa errada.
 
 - **Postgres (Supabase)** — schema, regras e RLS. A lógica está no banco, então
   nenhum cliente consegue burlá-la.
-- **Edge Function (Deno)** — worker que envia os e-mails e monta o `.ics`.
-- **Resend** — envio. Não exige admin do Microsoft 365.
-- **Login por magic link** — o professor entra com o e-mail institucional, sem senha
-  nova e sem app registrado no Entra ID.
+- **Next.js na Vercel** — as telas.
+- **Edge Function (Deno)** — worker de e-mail, pronto mas desligado (veja abaixo).
 
-### Por que não SSO Microsoft
+### Nenhuma dependência do TI
 
-Registrar app no Entra ID e conceder permissões do Graph exige administrador do
-tenant. O magic link entrega o mesmo resultado prático (sem senha nova) e o `.ics`
-entrega o lembrete no calendário sem tocar no Graph — funcionando também no Google
-e no celular.
+Registrar app no Entra ID e conceder permissões do Microsoft Graph exige
+administrador do tenant, que não temos. Então nada aqui depende da Microsoft:
+
+- **Login**: senha criada pela coordenação **ou** magic link. A senha funciona sem
+  nenhum e-mail configurado, então o sistema roda desde o primeiro dia.
+- **Avisos**: hoje aparecem na aba **Avisos** dentro do próprio sistema.
+
+### Ligando o e-mail depois
+
+Toda notificação já nasce numa fila (`notificacao`). Com `email_ativo = false`, ela
+fica só no app. Quando houver um remetente configurado:
+
+```sql
+update config_sistema set email_ativo = true;
+```
+
+A partir daí os novos avisos saem também por e-mail, com anexo `.ics` para o
+calendário do professor. Nenhuma regra muda — só a chave.
+
+Para isso é preciso um domínio de envio (próprio ou o institucional, com dois
+registros DNS) e a chave do Resend nos secrets.
 
 ## Instalação
 
@@ -87,11 +102,33 @@ supabase functions deploy notificar
 E agende a chamada a cada 5 minutos (veja o cabeçalho de
 `supabase/functions/notificar/index.ts`).
 
+### 4. App
+
+```bash
+cd web
+cp .env.example .env.local     # e preencha com a URL e a anon key do projeto
+npm install
+npm run dev
+```
+
+Deploy na Vercel: apontar para a pasta `web/` e definir as duas variáveis
+`NEXT_PUBLIC_SUPABASE_*`.
+
+## Telas
+
+| Rota | Quem usa | Para quê |
+|---|---|---|
+| `/agenda` | Professor | Escolhe frota e data, vê o saldo de cada horário e reserva |
+| `/minhas` | Professor | Suas reservas e cancelamento |
+| `/fila` | Estagiário, coordenação | Fila do dia com check-out e conferência de devolução |
+| `/avisos` | Todos | Confirmações, lembretes e alertas de atraso |
+
 ## Testes
 
 ```bash
 ./supabase/tests/run.sh                                    # regras + RLS
 node supabase/functions/_shared/__tests__/ics.test.mjs     # geração do .ics
+cd web && npm run typecheck && npm run build                # app
 ```
 
 A suíte de RLS roda como `authenticated`, não como superusuário — superusuário ignora
