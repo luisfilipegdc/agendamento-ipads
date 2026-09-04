@@ -105,26 +105,45 @@ E agende a chamada a cada 5 minutos (veja o cabeçalho de
 ### 4. App
 
 ```bash
-cd web
 cp .env.example .env.local     # preencha com a URL e a chave PUBLICÁVEL
 npm install
 npm run dev
 ```
 
-Na Vercel, em Settings → Environment Variables:
+O app fica na raiz do repositório, então a Vercel o detecta sozinha — **não**
+configure Root Directory. Só faltam as variáveis, em Settings → Environment
+Variables:
 
 | Variável | Valor |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` |
 
-E em Settings → General, defina o **Root Directory** como `web`.
+Em Settings → Git, a **Production Branch** precisa apontar para a branch que
+existe no repositório. Se ela apontar para uma branch inexistente, o domínio
+responde 404 porque não há deployment de produção.
 
 A chave publicável é segura no navegador — quem controla o acesso é o RLS do banco.
 A **secret key nunca vai para a Vercel do app**: ela ignora o RLS por completo. Ela
 só entra nos secrets da Edge Function, quando o e-mail for ligado.
 
 Não é preciso `@vercel/connect`: o app lê as duas variáveis direto.
+
+## Estrutura
+
+```
+app/          telas (Next.js App Router)
+componentes/  cabeçalho e partes compartilhadas
+lib/          clientes do Supabase, configuração e tipos
+middleware.ts protege as rotas e renova a sessão
+supabase/
+  migrations/ schema, regras, RLS e seed
+  functions/  worker de e-mail (Deno) — pronto, desligado
+  tests/      suíte executável
+scripts/
+  instalar.sql  tudo em um arquivo, para colar no SQL Editor
+docs/         fluxo de logística
+```
 
 ## Telas
 
@@ -140,7 +159,7 @@ Não é preciso `@vercel/connect`: o app lê as duas variáveis direto.
 ```bash
 ./supabase/tests/run.sh                                    # regras + RLS
 node supabase/functions/_shared/__tests__/ics.test.mjs     # geração do .ics
-cd web && npm run typecheck && npm run build                # app
+npm run typecheck && npm run build                          # app
 ```
 
 A suíte de RLS roda como `authenticated`, não como superusuário — superusuário ignora

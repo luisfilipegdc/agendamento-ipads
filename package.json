@@ -5,8 +5,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:db": "./supabase/tests/run.sh",
+    "test:ics": "node supabase/functions/_shared/__tests__/ics.test.mjs",
+    "test": "npm run typecheck && npm run test:ics"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
