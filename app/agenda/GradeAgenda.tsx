@@ -113,9 +113,12 @@ export function GradeAgenda(
     return acc;
   }, {});
 
-  const diaSemana = new Date(`${data}T12:00:00`).toLocaleDateString("pt-BR", {
+  // Só a primeira letra em maiúscula: `capitalize` no CSS deixaria
+  // "Sexta-Feira, 04 De Setembro".
+  const bruto = new Date(`${data}T12:00:00`).toLocaleDateString("pt-BR", {
     weekday: "long", day: "2-digit", month: "long",
   });
+  const diaSemana = bruto.charAt(0).toUpperCase() + bruto.slice(1);
 
   return (
     <>
@@ -155,7 +158,7 @@ export function GradeAgenda(
       {erro && <div className="aviso erro">{erro}</div>}
 
       <div className="painel">
-        <p style={{ margin: "0 0 12px", fontWeight: 600, textTransform: "capitalize" }}>
+        <p style={{ margin: "0 0 12px", fontWeight: 600 }}>
           {diaSemana}
         </p>
 
@@ -205,9 +208,21 @@ export function GradeAgenda(
                         </td>
                         <td className="esconde-movel">
                           {l.eh_intervalo ? null : l.tem_estagiario ? (
-                            <span className="etiqueta ok">entrega em sala</span>
+                            <span
+                              className="etiqueta ok"
+                              title="Há estagiário de plantão neste horário: os equipamentos são levados até a sala e buscados ao fim da aula."
+                            >
+                              entrega em sala
+                            </span>
                           ) : (
-                            <span className="etiqueta alerta">retirada no balcão</span>
+                            <span
+                              className="etiqueta alerta"
+                              title={`Não há estagiário de plantão neste horário. Retire e devolva em ${
+                                pool.ponto_apoio ?? "Coordenação"
+                              }.`}
+                            >
+                              retirada no balcão
+                            </span>
                           )}
                         </td>
                         <td style={{ textAlign: "right" }}>
