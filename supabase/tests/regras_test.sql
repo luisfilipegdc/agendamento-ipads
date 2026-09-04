@@ -49,14 +49,18 @@ begin
   select id into v_pool_mta from pool where nome = 'iPads Anos Finais';
   select id into v_pool_mto from pool where nome = 'iPads Maristão';
 
+  -- O domínio precisa estar autorizado, senão o provisionamento recusa o acesso.
+  insert into dominio_permitido (dominio, papel_padrao, unidade_id)
+  values ('marista.edu.br', 'PROFESSOR', v_pio) on conflict do nothing;
+
   insert into auth.users (id, email) values
     (v_prof,  'prof1@marista.edu.br'),
     (v_prof2, 'prof2@marista.edu.br'),
     (v_coord, 'coord@marista.edu.br');
-  insert into pessoa (id, nome, email, unidade_id) values
-    (v_prof,  'Vinicius',  'prof1@marista.edu.br', v_pio),
-    (v_prof2, 'Telma',     'prof2@marista.edu.br', v_mta),
-    (v_coord, 'Coordenação','coord@marista.edu.br', v_pio);
+  -- O trigger de provisionamento já criou os perfis; aqui só ajustamos nome/unidade.
+  update pessoa set nome = 'Vinicius',    unidade_id = v_pio where id = v_prof;
+  update pessoa set nome = 'Telma',       unidade_id = v_mta where id = v_prof2;
+  update pessoa set nome = 'Coordenação', unidade_id = v_pio where id = v_coord;
   insert into pessoa_papel values (v_coord, 'COORDENACAO', v_pio);
 
   select id into v_h1 from horario

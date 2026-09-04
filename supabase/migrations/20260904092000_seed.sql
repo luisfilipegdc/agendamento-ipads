@@ -167,3 +167,11 @@ select u.id, c.chave, c.hora::time, c.antec, c.dest::papel[]
     ('resumo_semanal', '16:00',  null, '{COORDENACAO}')
   ) as c(chave, hora, antec, dest)
 on conflict (unidade_id, chave) do nothing;
+
+-- -----------------------------------------------------------------------------
+-- Domínios autorizados a entrar via magic link.
+-- SUBSTITUA pelo domínio real da rede antes de abrir para os professores.
+-- Sem nenhuma linha aqui, ninguém consegue acessar — é proposital.
+-- -----------------------------------------------------------------------------
+-- insert into dominio_permitido (dominio, papel_padrao, unidade_id)
+-- values ('marista.edu.br', 'PROFESSOR', null);
