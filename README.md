@@ -106,13 +106,25 @@ E agende a chamada a cada 5 minutos (veja o cabeçalho de
 
 ```bash
 cd web
-cp .env.example .env.local     # e preencha com a URL e a anon key do projeto
+cp .env.example .env.local     # preencha com a URL e a chave PUBLICÁVEL
 npm install
 npm run dev
 ```
 
-Deploy na Vercel: apontar para a pasta `web/` e definir as duas variáveis
-`NEXT_PUBLIC_SUPABASE_*`.
+Na Vercel, em Settings → Environment Variables:
+
+| Variável | Valor |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` |
+
+E em Settings → General, defina o **Root Directory** como `web`.
+
+A chave publicável é segura no navegador — quem controla o acesso é o RLS do banco.
+A **secret key nunca vai para a Vercel do app**: ela ignora o RLS por completo. Ela
+só entra nos secrets da Edge Function, quando o e-mail for ligado.
+
+Não é preciso `@vercel/connect`: o app lê as duas variáveis direto.
 
 ## Telas
 
