@@ -1,15 +1,19 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { SUPABASE_CHAVE_PUBLICA, SUPABASE_URL } from "@/lib/config";
+import { configurado, supabaseChavePublica, supabaseUrl } from "@/lib/config";
 
 const PUBLICAS = ["/login", "/auth"];
 
 export async function middleware(req: NextRequest) {
+  // Sem as variáveis, não há sessão para validar. Deixa passar para que a
+  // página mostre o erro de configuração, em vez de virar laço de redirect.
+  if (!configurado()) return NextResponse.next({ request: req });
+
   let res = NextResponse.next({ request: req });
 
   const supabase = createServerClient(
-    SUPABASE_URL,
-    SUPABASE_CHAVE_PUBLICA,
+    supabaseUrl(),
+    supabaseChavePublica(),
     {
       cookies: {
         getAll: () => req.cookies.getAll(),

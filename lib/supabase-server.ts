@@ -1,13 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { SUPABASE_CHAVE_PUBLICA, SUPABASE_URL } from "./config";
+import { supabaseChavePublica, supabaseUrl } from "./config";
 
 export async function criaClienteServidor() {
   const store = await cookies();
 
   return createServerClient(
-    SUPABASE_URL,
-    SUPABASE_CHAVE_PUBLICA,
+    supabaseUrl(),
+    supabaseChavePublica(),
     {
       cookies: {
         getAll: () => store.getAll(),
