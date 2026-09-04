@@ -301,7 +301,8 @@ comment on function gera_tarefas is
 -- -----------------------------------------------------------------------------
 create or replace function enfileira_notificacao(
   p_chave text, p_pessoa uuid, p_assunto text, p_corpo text,
-  p_quando timestamptz default now(), p_canal text default 'EMAIL'
+  p_quando timestamptz default now(), p_canal text default 'EMAIL',
+  p_reserva uuid default null
 ) returns void
 language plpgsql as $$
 declare v_email text;
@@ -310,8 +311,9 @@ begin
   if v_email is null then return; end if;
 
   insert into notificacao (chave, destinatario_id, destinatario_email,
-                           canal, assunto, corpo, agendada_para)
-  values (p_chave, p_pessoa, v_email, p_canal, p_assunto, p_corpo, p_quando)
+                           canal, assunto, corpo, agendada_para, reserva_id)
+  values (p_chave, p_pessoa, v_email, p_canal, p_assunto, p_corpo, p_quando,
+          p_reserva)
   on conflict (chave) do nothing;   -- nunca envia duas vezes
 end;
 $$;
@@ -373,7 +375,8 @@ begin
       else
         'Sua reserva está confirmada. A estagiária levará os equipamentos até a sala '
         || 'e os buscará ao fim do horário.'
-      end);
+      end,
+      now(), 'EMAIL', new.id);
 
     -- 2. Coordenação é avisada de todo agendamento novo
     for v_coord in
@@ -386,7 +389,8 @@ begin
       perform enfileira_notificacao(
         'novo_agendamento:' || new.id || ':' || v_coord.id, v_coord.id,
         'Novo agendamento — ' || v_unidade.nome,
-        v_prof.nome || ' agendou ' || v_resumo);
+        v_prof.nome || ' agendou ' || v_resumo,
+        now(), 'EMAIL', new.id);
     end loop;
 
     -- 3. Lembrete na véspera, 17h
@@ -396,7 +400,8 @@ begin
       'Amanhã às ' || to_char(h.inicio, 'HH24:MI') || ' você tem '
         || new.quantidade || ' equipamentos reservados para a turma '
         || coalesce(v_turma, '—') || '.',
-      ((new.data - 1) + time '17:00') at time zone v_unidade.fuso);
+      ((new.data - 1) + time '17:00') at time zone v_unidade.fuso,
+      'EMAIL', new.id);
   end if;
 
   -- Cancelamento: avisa e promove o primeiro da lista de espera.
@@ -452,7 +457,8 @@ begin
       'atraso:' || r.id, r.professor_id,
       'Devolução pendente — ' || r.pool,
       format('Os %s equipamentos do horário %s ainda não foram devolvidos.',
-             r.quantidade, r.rotulo));
+             r.quantidade, r.rotulo),
+      now(), 'EMAIL', r.id);
 
     v_qtd := v_qtd + 1;
   end loop;

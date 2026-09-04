@@ -175,6 +175,11 @@ begin
                where reserva_destino_id = v_r2 and tipo='ENTREGA') = '07:20',
              'entrega agendada 10 min antes do início');
 
+  perform ok(exists (
+      select 1 from fila_do_dia(v_mta, v_data)
+       where tipo = 'ENTREGA' and origem = 'Coordenação' and destino = 'Sala 12'),
+    'entrega sai do local de guarda da frota para a sala da turma');
+
   -- ===========================================================
   raise notice '--- transferência direta entre salas ---';
   insert into reserva (pool_id, horario_id, data, professor_id, turma_id, quantidade)
@@ -255,6 +260,35 @@ begin
   perform ok((select disponivel from agenda_do_dia(v_pool_pio, v_data)
                where rotulo = '7h30-8h30') = 10,
              'saldo do horário reflete as reservas vivas');
+
+  -- ===========================================================
+  raise notice '--- fila do dia do estagiário ---';
+  select count(*) into n from fila_do_dia(v_mta, v_data);
+  perform ok(n > 0, 'fila do dia lista as tarefas da unidade');
+
+  perform ok(exists (
+      select 1 from fila_do_dia(v_mta, v_data)
+       where tipo = 'TRANSFERENCIA' and origem = 'Sala 12' and destino = 'Sala 07'),
+    'transferência aparece na fila com origem e destino legíveis');
+
+  -- Resumo diário: precisa de alguém com papel na unidade para receber.
+  insert into pessoa_papel values (v_coord, 'ESTAGIARIO', v_mta)
+    on conflict do nothing;
+  perform enfileira_fila_do_dia(v_data);
+  select count(*) into n from notificacao
+   where chave like 'fila_do_dia:' || v_mta || ':' || v_data || '%';
+  perform ok(n = 1, 'resumo da fila é enfileirado para o estagiário');
+
+  -- O resumo lista só trabalho PENDENTE. A transferência daquele dia já foi
+  -- concluída no teste, então não deve aparecer — é o ponto da verificação.
+  perform ok((select corpo from notificacao
+               where chave like 'fila_do_dia:' || v_mta || '%')
+             not like '%TRANSFERENCIA%',
+             'o resumo não repete tarefa já concluída');
+
+  perform ok((select corpo from notificacao
+               where chave like 'fila_do_dia:' || v_mta || '%') like '%COLETA%',
+             'o resumo lista o que ainda falta fazer');
 
   raise notice '';
   raise notice '=== TODOS OS TESTES PASSARAM ===';

@@ -305,6 +305,7 @@ create table notificacao (
   chave             text not null unique,          -- ex.: 'vespera:<reserva_id>'
   destinatario_id   uuid references pessoa(id) on delete cascade,
   destinatario_email text not null,
+  reserva_id        uuid references reserva(id) on delete cascade,
   canal             text not null default 'EMAIL', -- EMAIL | TEAMS
   assunto           text not null,
   corpo             text not null,
