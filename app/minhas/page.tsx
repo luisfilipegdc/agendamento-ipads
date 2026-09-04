@@ -1,9 +1,13 @@
 import { criaClienteServidor } from "@/lib/supabase-server";
 import { Cabecalho } from "@/componentes/Cabecalho";
+import { ConfiguracaoPendente } from "@/componentes/ConfiguracaoPendente";
+import { configurado } from "@/lib/config";
 import { MinhasReservas } from "./MinhasReservas";
 import type { ReservaResumo } from "@/lib/tipos";
 
 export default async function Minhas() {
+  if (!configurado()) return <ConfiguracaoPendente />;
+
   const supabase = await criaClienteServidor();
   const { data: { user } } = await supabase.auth.getUser();
 

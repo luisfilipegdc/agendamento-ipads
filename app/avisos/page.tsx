@@ -1,8 +1,12 @@
 import { criaClienteServidor } from "@/lib/supabase-server";
 import { Cabecalho } from "@/componentes/Cabecalho";
+import { ConfiguracaoPendente } from "@/componentes/ConfiguracaoPendente";
+import { configurado } from "@/lib/config";
 import { ListaAvisos } from "./ListaAvisos";
 
 export default async function Avisos() {
+  if (!configurado()) return <ConfiguracaoPendente />;
+
   const supabase = await criaClienteServidor();
   const { data, error } = await supabase.rpc("meus_avisos", { p_limite: 50 });
 

@@ -1,5 +1,7 @@
 import { criaClienteServidor } from "@/lib/supabase-server";
 import { Cabecalho } from "@/componentes/Cabecalho";
+import { ConfiguracaoPendente } from "@/componentes/ConfiguracaoPendente";
+import { configurado } from "@/lib/config";
 import { GradeAgenda } from "./GradeAgenda";
 import type { LinhaAgenda } from "@/lib/tipos";
 
@@ -14,6 +16,8 @@ export default async function Agenda({
 }: {
   searchParams: Promise<{ pool?: string; data?: string }>;
 }) {
+  if (!configurado()) return <ConfiguracaoPendente />;
+
   const sp = await searchParams;
   const supabase = await criaClienteServidor();
 
