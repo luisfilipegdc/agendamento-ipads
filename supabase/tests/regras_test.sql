@@ -308,6 +308,52 @@ begin
              'worker de e-mail passa a enxergar a fila');
   update config_sistema set email_ativo = false;
 
+  -- ===========================================================
+  -- As três unidades dividem o mesmo domínio de e-mail, então o domínio não
+  -- diz a qual unidade o professor pertence.
+  raise notice '--- escolha de unidade no primeiro acesso ---';
+  declare
+    v_novo uuid := gen_random_uuid();
+    v_un   uuid;
+  begin
+    -- Domínio SEM unidade: é o caso real, em que as três unidades dividem
+    -- o mesmo e-mail institucional.
+    insert into dominio_permitido (dominio, papel_padrao, unidade_id)
+    values ('rede.exemplo', 'PROFESSOR', null) on conflict do nothing;
+
+    insert into auth.users (id, email) values (v_novo, 'novato@rede.exemplo');
+    perform ok((select unidade_id from pessoa where id = v_novo) is null,
+               'professor de domínio sem unidade nasce sem unidade');
+
+    -- Sem unidade, minhas_unidades() é vazio e a reserva seria recusada: é
+    -- exatamente o beco sem saída que a tela de escolha evita.
+    perform ok((select count(*) from unidades_disponiveis()) = 3,
+               'a tela de escolha lista as 3 unidades');
+
+    select id into v_un from unidade where nome = 'Maristinha';
+    perform set_config('request.jwt.claim.sub', v_novo::text, true);
+
+    perform define_minha_unidade(v_un);
+    perform ok((select unidade_id from pessoa where id = v_novo) = v_un,
+               'escolher a unidade grava no perfil');
+    perform ok(exists (select 1 from pessoa_papel
+                        where pessoa_id = v_novo and papel = 'PROFESSOR'
+                          and unidade_id = v_un),
+               'o papel acompanha a unidade escolhida');
+    perform ok(not exists (select 1 from pessoa_papel
+                            where pessoa_id = v_novo and unidade_id is distinct from v_un),
+               'não sobra papel apontando para outra unidade');
+
+    perform ok(not (select precisa_escolher_unidade from meu_perfil()),
+               'depois de escolher, a tela não pede de novo');
+
+    perform falha_com(
+      format('select define_minha_unidade(%L)', gen_random_uuid()),
+      'inexistente', 'unidade inválida é recusada');
+
+    perform set_config('request.jwt.claim.sub', '', true);
+  end;
+
   raise notice '';
   raise notice '=== TODOS OS TESTES PASSARAM ===';
 end $$;

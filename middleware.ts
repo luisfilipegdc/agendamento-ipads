@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { configurado, supabaseChavePublica, supabaseUrl } from "@/lib/config";
 
 const PUBLICAS = ["/login", "/auth"];
+// Alcançáveis por quem ainda não escolheu unidade.
+const SEM_UNIDADE = ["/unidade", "/avisos"];
 
 export async function middleware(req: NextRequest) {
   // Sem as variáveis, não há sessão para validar. Deixa passar para que a
@@ -45,6 +47,23 @@ export async function middleware(req: NextRequest) {
     url.pathname = "/agenda";
     url.search = "";
     return NextResponse.redirect(url);
+  }
+
+  // As três unidades dividem o mesmo domínio de e-mail, então o primeiro acesso
+  // não sabe onde a pessoa trabalha. Sem unidade, o RLS recusaria toda reserva;
+  // mandamos escolher antes que ela esbarre nisso.
+  if (user && !PUBLICAS.some((p) => caminho.startsWith(p)) &&
+      !SEM_UNIDADE.some((p) => caminho.startsWith(p))) {
+    const { data: perfil } = await supabase
+      .rpc("meu_perfil")
+      .single<{ precisa_escolher_unidade: boolean }>();
+
+    if (perfil?.precisa_escolher_unidade) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/unidade";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
   }
 
   return res;
